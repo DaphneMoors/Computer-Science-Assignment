@@ -1,0 +1,975 @@
+import pandas as pd
+import math
+import json
+import random
+from random import randint
+import itertools
+import numpy as np
+from numpy import array_split
+import collections
+from collections import defaultdict
+import re
+from sklearn.utils import resample
+import matplotlib.pyplot as plt
+from sklearn.cluster import AgglomerativeClustering
+import sys
+
+# Load data
+# with open("/Users/daphn/Documents/Uni/Courses/Computer Science/TVs-all-merged.json") as data:
+#     DataF = json.load(data)
+# data = dict(list(DataF.items())[:1262])
+# # print("length = ", len(data)) # 1262
+
+data = json.load(open("/Users/daphn/Documents/Uni/Courses/Computer Science/TVs-all-merged.json"))
+
+# for key, value in data.items():
+#     # print("key is: ", key, "value is: ", value)
+#     if len(value) > 1:
+#         print(key)
+
+brands_list = ['Acer','SuperSonic', 'Admiral', 'Admiral Overseas Corporation (AOC)', 'Advent', 'Adyson', 'Asianet Digital LED TV', 'Agath', 'Agrexsione', 'Aiwa', 'Akai', 'Akari', 'Akurra', 'Alba (Harvard)', 'Amplivision', 'Amstrad', 'Andrea Electronics', 'Anitech', 'Apex Digital', 'Arcam', 'Arena', 'Argosy Radiovision', 'Arise India', 'AGA', 'Astor', 'Asuka', 'Atlantic', 'Atwater Television', 'Audar', 'Automatic Radio Manufacturing', 'Audiovox', 'AVEL', 'AVol', 'AWA', 'Bace Television', 'Baird', 'Bang & Olufsen', 'Baumann Meyer', 'Beko', 'BenQ', 'Bell Television', 'BelTek Tv', 'Bharat', 'Beon', 'Binatone', 'BiSA', 'Bitova electronika', 'Blaupunkt', 'BLUE Edge', 'Blue Sky', 'Blue Star', 'Bondstec', 'BOSE', 'BPL india lmt', 'Brandt', 'Brionvega', 'Britannia', 'BrokSonic', 'BSR', 'BTC', 'Bush', 'Calbest Electronics', 'Caixun', 'Capehart Electronics', 'Carrefour', 'Cascade', 'Cathay', 'Cello Electronics', 'Centurion', 'Certified Radio Labs', 'Cenfonix', 'CGE', 'Changhong', 'ChiMei', 'Cimline', 'Citizen', 'Clairetone Electric Corporation', 'Clarivox', 'Clatronic', 'CloudWalker[1]', 'Coby', 'Colonial Radio (Sylvania)', 'Color Electronics Corporation', 'Compal Electronics[2][3]', 'Conar Instruments', 'Condor', 'Conrac (Monitors)', 'Conrac (Germany)', 'Contec', 'Continental Edison', 'Cortron Industries (Hoffman)', 'Cossor', 'Craig', 'Crown', 'Crystal', 'CS Electronics', 'CTC', 'Curtis Mathes Corporation', 'Cybertron', 'Daewoo', 'Dainichi', 'Damro', 'Dansai', 'Dayton', 'De Graaf', 'Decca', 'Deccacolour (UK)', 'Defiant', 'Dell', 'Delmonico International Corporation', 'Diamond Vision', 'Diboss', 'Digihome', 'Dixi', 'Dual', 'Dual Tec', 'Dumont', 'DuMont Laboratories', 'Durabrand', 'Dyanora (India)', 'Dynatron', 'Dynex', 'Edler', 'Electron', 'Electronics Corp. (ECTV India)', 'English Electric', 'English Electric Valve Company', 'EKCO', 'Elbe', 'Electrohome', 'Element', 'Elin', 'Elite', 'Elta', 'Emerson', 'Emerson', 'EMI', 'Erres', 'Expert', 'Farnsworth', 'Ferguson Electronics', 'Ferranti', 'Fidelity Radio', 'Finlandia', 'Finlux (Vestel)', 'FIRST', 'Firstline', 'Fisher Electronics', 'Fleetwood (CONRAC)', 'Flint', 'Formenti', 'Frontech', 'Fujitsu', 'Funai', 'GC', 'Geloso', 'General Electric', 'General Electric Company', 'General Gold', 'Geloso', 'Genexxa', 'GoldStar', 'Goodmans Industries', 'Gorenje', 'GPM', 'Gradiente', 'Graetz', 'Granada', 'Grandin', 'Grundig', 'Haier', 'Hallicrafters', 'Hannspree', 'Hanseatic', 'Hantarex', 'Harvard International', 'Harvey Industries', 'Haver Electric', 'HCM', 'Healing', 'Helkama', 'Helvar', 'Heath Company/Heathkit', 'Hesstar', 'Hinari Domestic Applicanes', 'Hisawa', 'HMV', 'Hisense', 'Hitachi', 'HKC', 'Hoffman Television (Cortron Ind)', 'Horizont', 'Howard Radio (Muntz)', 'Huanyu', 'Hypson', 'Ice', 'Ices', 'Inelec[4]', 'ITS', 'ITT Corporation', 'ITT-KB (UK)', 'ITT-SEL (Germany)', 'Imperial', 'INB', 'Indiana', 'Ingelen', 'Inno Hit', 'Innovex', 'Insignia', 'Interfunk', 'Intervision', 'Isukai', 'IZUMI', 'Jensen Loudspeakers', 'JMB', 'Joyeux', 'Kaisui', 'Kamacrown', 'Kane Electronics Corporation', 'Kapsch', 'Kathrein', 'Kendo', 'Kenmore', 'Kent Television', 'Khind', 'Kingsley', 'KIVI (Ukraine)', 'Kloss Video', 'Kneissel', 'Kogan', 'Kolster-Brandes', 'Konka', 'Korpel', 'Koyoda', 'Kreisler', 'KTC', 'Lanix', 'Le.com', 'Leyco', 'LG', 'Liesenkötter', 'Linsar', 'LLoyds', 'Loewe', 'Luma', 'Luxor', 'M Electronic', 'MTC', 'Magnadyne', 'Magnafon', 'Magnasonic', 'Magnavox', 'Magnavox (subsidiary of Philips)', 'Maneth', 'Marantz', 'Marconiphone', 'Mark', 'Matsui', 'Mattison Electronics', 'McMichael Radio', 'Mediator', 'Memorex', 'Micromax', 'Mercury-Pacific', 'Metz', 'Minerva', 'Minoka', 'Mirc Electronics', 'Mitsubishi', 'Mivar', 'Mi TV', 'Mobile360 Tv', 'Motorola', 'Multitech', 'Muntz', 'MT Logic', 'Murphy Radio', 'NASCO ELECTRONICS', 'NEC', 'Neckermann', 'Nelco', 'NEI', 'NEOS', 'NetTV', 'Nikkai', 'Nobliko', 'Nokia', 'Nordmende', 'North American Audio', 'Olympic Radio and Television', 'Oceanic', 'oCosmo', 'OK tv', 'Olevia', 'One', 'OnePlus', 'Onida', 'Onwa', 'Orion', 'Orion', 'Osaki', 'Oso', 'Osume', 'Otake', 'Otto Versand', 'Palladium', 'Panama', 'Panasonic', 'Pathe Cinema', 'Pathe Marconi', 'Pausa', 'Perdio', 'Pensonic', 'Peto Scott', 'Philco', 'Philips', 'Philmore Manufacturing', 'Phonola', 'Pilot Radio', 'Pilot Radio Corporation', 'Jerrold Electronics', 'Pioneer', 'Planar Systems', 'Polar', 'Polaroid', 'Profilo Holding', 'Profex', 'Prima', 'Privé', 'ProLine', 'ProScan', 'ProTech', 'Pulser', 'Pye', 'Pyle', 'PyxScape', 'Quasar', 'Quelle', 'Questa', 'R-Line', 'REI', 'Radiola', 'Radiola', 'RadioMarelli', 'RadioShack', 'Rank Arena', 'Ravenswood', 'Rauland Borg', 'RBM', 'RCA', 'RCA', 'Realistic', 'Rediffusion', 'Regentone', 'Revox', 'Rex', 'RFT', 'RGD', 'Roadstar', 'Rolls', 'Rolsen Electronics', 'Rubin', 'SABA', 'Saccs', 'Saisho', 'Salora', 'Salora International', 'Sambers', 'Sampo Corp. of America', 'Samsung', 'Sanabria Television Corporation', 'Sandra', 'Sansui', 'Sanyo', 'SBR', 'Sceptre', 'Schaub Lorenz', 'Schneider Electric', 'Schneider', 'Schneider', 'Sears', 'SEG', 'SEI', 'Sei-Sinudyne', 'Seiki Digital', 'Selco', 'Sèleco', 'Sentra', 'Setchell Carlson', 'Seura', 'Sharp', 'Airis', 'Shinco', 'Shorai', 'Siarem', 'Siemens', 'Silo Digital', 'Skywalker', 'Silvertone', 'Sinudyne', 'Skyworth', 'Sobell', 'Solavox', 'Soniq', 'Sonitron', 'Sonodyne', 'Sonoko', 'Sonolor', 'Sonora', 'Sontec', 'Sony', 'Soyo', 'Soundwave', 'Softlogic', 'Sparc', 'Stern-Radio Staßfurt', 'Stromberg Carlson', 'Stewart-Warner', 'SunLite TV', 'Sunkai', 'Susumu', 'Supersonic', 'Supra', 'Sylvania', 'Symphonic Electronic Corp', 'Symphonic Radio and Electronics', 'Sysline', 'Tandy', 'Technika TV', 'Tatung Company', 'TCL', 'Tec', 'Tech-Master', 'Technema', 'Technics', 'Technisat', 'Tecnimagen', 'Technika', 'TECO', 'Teleavia', 'Telebalt', 'Telefunken', 'Telemeister', 'Telequip', 'Teletech', 'Teleton', 'Teletronics', 'Television, Inc.', 'Temp', 'Tensai', 'Texet', 'Thomson SA', 'Toshiba']
+
+
+def bootstrap():
+    data_length = list(range(0,1624))
+
+    bootstrapped_sample = resample(data_length, replace=True, n_samples=len(data_length)) #1624
+    bootstrap_train = []
+    for tv in bootstrapped_sample:
+        if tv not in bootstrap_train:
+            bootstrap_train.append(tv)
+
+    bootstrap_test = [x for x in data_length if x not in bootstrap_train]
+
+    return bootstrap_train, bootstrap_test
+
+train, test = bootstrap()
+
+# create dictionary with all TV's
+def bigDictionary(data):
+    TVs = {}
+    count = 1
+    for keys in data.keys():
+        for tv in data[str(keys)]:
+            TVs.update({count : tv})
+            count+=1
+    numTVs = len(TVs) #1624
+    # print(numTVs)
+
+    return TVs
+# print(TVs[1]['shop']) # this is the total dictionary
+
+# create separate dictionaries for shop, modelID, title and features
+def indivDictionaries(TVs):
+    shop_dict = {}
+    modelID_dict = {}
+    modelID_title_dict = {}
+    title_dict = {}
+    features_dict = {}
+    brands_dict = {}
+    for key, value in TVs.items():
+        features_dict_int = {}
+        shop_dict.update({key : value['shop']})
+        modelID_dict.update({key : value['modelID']})
+        title_dict.update({key : value['title']})
+        for i in value['featuresMap']:
+            # print("i is", i)
+            # print("the value is", value['featuresMap'][i])
+            features_dict_int.update({i : value['featuresMap'][i]})
+        features_dict.update({key : features_dict_int})
+    return shop_dict, modelID_dict, modelID_title_dict, title_dict, features_dict, brands_dict
+
+
+# %% cleaning
+def replaceunit(x):
+    hz = [r'Hertz', 'hertz', 'Hz', 'HZ', ' hz', '-hz', 'hz']
+    for item in hz:
+        x = x.replace(item, 'hz')
+
+    inch = [r'-inches', '-inch', ' inches', 'inches', ' inch', '-Inches', '-Inch', "'", '”', 'Inches', ' Inches', 'inch','"', '""']
+    for item in inch:
+        x = x.replace(item, 'IH')
+
+    lb = [r' lbs.', ' lbs', ' lb.', ' pounds', 'pounds', 'lbs.', 'lb.']
+    for item in lb:
+        x = x.replace(item, 'lb')
+
+    cdma = [r' cd/mâ²', ' cdm2', 'cdm2', 'lm', ' lm', ' cd/m²', 'cd/m²', ' cd/m2', 'nit']
+    for item in cdma:
+        x = x.replace(item, 'cdma')
+
+    watt = [r' watt', 'Watt', ' watt']
+    for item in watt:
+        x = x.replace(item, 'watt')
+
+    p = [r'i/p', ' i/p', '/24p']
+    for item in p:
+        x = x.replace(item, ' ')
+
+    kg = [r' kg', 'kg', 'KG', ' KG', 'Kg']
+    for item in kg:
+        x = x.replace(item, 'kg')
+
+    return x
+
+def cleantitle(x):
+    x = x.lower()
+    x = replaceunit(x)
+    x = x.replace(')', '')
+    x = x.replace('(', '')
+    x = x.replace(']', '')
+    x = x.replace('[', '')
+    x = x.replace('/', '')
+    x = x.replace('.0', '')
+    x = x.replace('inchwatt', 'inch')
+    x = x.replace('.com', '')
+    x = x.replace('.net', '')
+    x = x.replace('https://', '')
+    x = x.replace('°', '')
+
+    return x
+
+def cleanvalue(x):
+    x = x.lower()
+    x = replaceunit(x)
+    x = x.replace('and', ' ')
+    x = x.replace('|', ' ')
+    x = x.replace(' x ', 'x')
+    x = x.replace(',', '')
+    x = x.replace('.', '')
+    x = x.replace(')', '')
+    x = x.replace('(', '')
+    x = x.replace('/', '')
+    x = x.replace('+', '')
+    x = x.replace('-', '')
+    x = x.replace('&#', '')
+    x = x.replace('°', '')
+    return x
+
+def cleanshop(x):
+    x = x.lower()
+    x = x.replace('.', '')
+    x = x.replace(' ', '')
+    return x
+
+def cleanbrand(x):
+    x = x.lower()
+    return x
+
+def cleanfeatures(x):
+    x = x.lower()
+    x = replaceunit(x)
+    x = x.replace(' and ', ' ')
+    x = x.replace('|', ' ')
+    x = x.replace(' x ', 'x')
+    x = x.replace(')', '')
+    x = x.replace('(', '')
+    x = x.replace('[', '')
+    x = x.replace(']', '')
+    x = x.replace('{', '')
+    x = x.replace('}', '')
+    # x = x.replace('/', ' ')
+    x = x.replace('+', '')
+    # x = x.replace('-', ' ')
+    x = x.replace('&#', '')
+    x = x.replace('$', '')
+    x = x.replace('°', '')
+    return x
+
+
+def stripfeatures(x):
+    x = x.lower()
+    x = replaceunit(x)
+    x = x.replace('°', '')
+    x = x.replace('inch', '')
+    x = x.replace('hz', '')
+    x = x.replace('lb', '')
+    x = x.replace('kg', '')
+    x = x.replace('cdma', '')
+    x = x.replace(' and ', '')
+    x = x.replace('watt', '')
+    x = x.replace('|', '')
+    x = x.replace(' x ', 'x')
+    # x = x.replace(',', '') 
+    # x = x.replace('.', '')
+    x = x.replace(')', '')
+    x = x.replace('(', '')
+    x = x.replace('/', '')
+    x = x.replace('+', '')
+    x = x.replace('-', '')
+    x = x.replace('&#', '')
+    x = x.replace('$', '')
+    x = x.replace('mm', '')
+    x = x.replace('ms', '')
+    x = x.replace('°', '')
+
+    return x
+    
+    def get_model_words_titles(titles, brands_temp_list, brands, modelIDs_title): # dictionary - not unique values
+    model_words_titles = {}
+    for key, value in titles.items():
+        temp_list = []
+        model_word_options = re.findall('([a-zA-Z0-9]*(([0-9]+[^0-9, ]+)|([^0-9, ]+[0-9]+))[a-zA-Z0-9]*)', value) # add 'standard' model words from titlelo
+        for index in range(0,len(model_word_options)):
+            if key in model_words_titles:
+                temp_list.append(model_word_options[index][0])
+                model_words_titles[key] = temp_list
+            else:
+                model_words_titles[key] = model_word_options[index][0]
+                temp_list.append(model_word_options[index][0])
+        for word in value.split(): # adds brands to model words title
+            if word.lower() in brands_temp_list:
+                if key in model_words_titles:
+                    temp_list.append(word.lower())
+                    model_words_titles[key] = temp_list
+                    if key not in brands.keys():
+                        brands[key] = word
+                else:
+                    model_words_titles[key] = word.lower()
+                    temp_list.append(word.lower())
+                    if key not in brands.keys():
+                        brands[key] = word
+        for element in temp_list:
+            max_length = 1
+            if (element.isalnum()) & (not element.isalpha()) & (len(element) > 7):
+                # if key <10:
+                #     print("alphanumeric element is:", element)
+                if len(element) > max_length:
+                    max_length = len(element)
+                    modelIDs_title.update({key: element})
+            # print("find all model words from temp_list (should be the individual model words): ", )
+
+    return model_words_titles, brands, modelIDs_title
+
+
+def get_model_words_features(features, brands_temp_list): # dictionary - not unique values
+    model_words_features = {}
+    for key, value in features.items():
+        temp_list = []
+        for k, v in features[key].items():
+            if re.findall('([a-zA-Z0-9]*(([0-9]+[^0-9, ]+)|([^0-9, ]+[0-9]+))[a-zA-Z0-9]*)', v) != []: # finds decimals, integers/decimals attached to letters or special tokens
+                model_word_options = re.findall('([a-zA-Z0-9]*(([0-9]+[^0-9, ]+)|([^0-9, ]+[0-9]+))[a-zA-Z0-9]*)', v)
+                for index in range(0,len(model_word_options)):
+                    if key in model_words_features:
+                        temp_list.append(stripfeatures(model_word_options[index][0]))                       
+                        model_words_features[key] = temp_list
+                    else:
+                        model_words_features[key] = model_word_options[index][0]
+                        temp_list.append(stripfeatures(model_word_options[index][0]))
+            if re.findall('^\.[0-9]+ ', v) != []: # additionally finds integers (stand alone)
+                model_word_integer_options = re.findall('^\.*[0-9]+ ', v)[0].strip()
+                for index in range(0, len(model_word_integer_options)):
+                    if key in model_words_features:
+                        temp_list.append(stripfeatures(model_word_integer_options[index][0]))
+                        model_words_features[key] = temp_list
+                    else:
+                        model_words_features[key] = model_word_integer_options[index][0]
+                        temp_list.append(stripfeatures(model_word_integer_options[index][0]))
+            for word in v.split():
+                if word in brands_temp_list:
+                    if key in model_words_features:
+                        temp_list.append(word)                       
+                        model_words_features[key] = temp_list
+                    else:
+                        model_words_features[key] = word
+                        temp_list.append(word)
+        try:
+            test = model_words_features[key]
+            continue
+        except KeyError:
+            model_words_features[key] = []
+
+
+    return model_words_features
+    
+    
+    def get_unique_list_model_words_titles(model_words_titles):
+    unique_list = []
+    for key, value in model_words_titles.items():
+        for index in range(0,len(value)):
+            if value[index] not in unique_list:
+                unique_list.append(value[index])
+
+    return unique_list
+
+def get_unique_list_model_words_features(model_words_features):
+    unique_list = []
+    for key, value in model_words_features.items():
+        for index in range(0,len(value)):
+            if value[index] not in unique_list:
+                unique_list.append(value[index])
+
+    return unique_list
+
+def get_unique_list_model_words_total(unique_model_words_features, unique_model_words_titles):
+    unique_list = []
+    for i in range(0, len(unique_model_words_titles)):
+        if unique_model_words_titles[i] not in unique_list:
+            unique_list.append(unique_model_words_titles[i])
+    for i in range(0, len(unique_model_words_features)):
+        if unique_model_words_features[i] not in unique_list:
+            unique_list.append(unique_model_words_features[i])
+    
+    return unique_list
+    
+    # merge two TVs with same modelID
+def merge_TVs(modelIDs_titles, model_words_titles, shops):
+    # print(model_words_titles)
+    temp = defaultdict(list)
+
+    # print(temp)
+
+    for key, value in sorted(modelIDs_titles.items()):
+        # print(key, value)
+        temp[value].append(key)
+
+    # join together model words for TVs with same model word in title
+    res = dict() 
+    for key in temp:
+        # print(key, temp[key], len(temp[key]))
+        if len(temp[key]) > 1:
+            for i in range(0, len(temp[key])):
+                listshops = []
+                listshops.append(shops[temp[key][i]])
+                for j in range(i+ 1, len(temp[key])):
+                    if shops[temp[key][j]] not in listshops:
+                        listshops.append(shops[temp[key][j]])
+                        if len(listshops) == len(temp[key]): # IDEA: you want to you let this candidate pair skip the distances matrix and set distance to 0 already
+                            res[', '.join([str(ele) for ele in temp[key]])] = key
+                            # if len(temp[key]) > 2:
+                            #     print(key)
+                            break                        
+                if key not in res.values():
+                    for j in range(i+ 1, len(temp[key])):
+                        listnumbers = []
+                        if shops[temp[key][i]] != shops[temp[key][j]]:
+                            # print(temp[key], temp[key][i], shops[temp[key][i]], temp[key][j], shops[temp[key][j]])
+                            listnumbers.append(temp[key][i])
+                            listnumbers.append(temp[key][j])
+                            res[', '.join([str(ele) for ele in listnumbers])] = key  # PROBLEM: 76 matches with 77 (good) and 1380 (bad) --> want to delete the pair furthest from 76 (ask professor if allowed)
+
+    # res = dict()
+    # for key in temp:
+    #     print(key)
+    #     res[', '.join([str(ele) for ele in temp[key]])] = key # keys are of type string
+    
+    # print(res)
+
+    # copy the original dictionary & remove items that are duplicate items
+    merged_model_words_titles = model_words_titles.copy()
+    list_removed = []
+    for key in list(model_words_titles.keys()):
+        for k in res.keys():
+            try:
+                if key == np.int(k):
+                    continue
+            except ValueError:
+                integers = k.split(', ')
+                for integer in integers:
+                    if key == np.int(integer):
+                        if key not in list_removed:
+                            list_removed.append(key)
+                            del merged_model_words_titles[key]
+    # print("list removed: ", list_removed)
+
+    # add the duplicate TVs's model words into one key
+    for key in res.keys():
+        try: 
+            key = np.int(key)
+        except ValueError:
+            integers = key.split(', ')
+            for integer in integers:
+                if key not in merged_model_words_titles.keys():
+                    # print(key, type(key))
+                    # print(model_words_titles)
+                    # print(model_words_titles[10])
+                    merged_model_words_titles[key] = list(model_words_titles[np.int(integer)])
+                else:
+                    for word in model_words_titles[np.int(integer)]:
+                        if word not in merged_model_words_titles[key]:
+                            merged_model_words_titles[key].append(word)
+
+    return res, merged_model_words_titles 
+    
+    
+    def create_binary_dict(unique_model_words, merged_model_words_titles, model_words_features):
+    binary_dict = {}
+    for key in merged_model_words_titles.keys():
+        list = [0] * (len(unique_model_words))
+        for index in range(0, len(unique_model_words)):
+            if isinstance(key, np.int):
+                if unique_model_words[index] in model_words_features[key] or unique_model_words[index] in merged_model_words_titles[key]:
+                    list[index] = 1
+                    continue
+            else:
+                integers = key.split(', ')
+                for integer in integers:
+                    if unique_model_words[index] in model_words_features[np.int(integer)] or unique_model_words[index] in merged_model_words_titles[key]:
+                        list[index] = 1
+                        break
+        binary_dict[key] = list        
+    return binary_dict
+    
+    
+    def create_signature_dict(binary_dict, shrinkage):
+    # create minhash functions
+    len_binary_values = 0
+    for key in binary_dict.keys():
+        len_binary_values = len(binary_dict[key])
+        break
+
+    k = math.ceil(shrinkage * len_binary_values)
+    if k % 2 != 0:
+        k = k + 1
+    primes = ([i for i in range(k+1, k + 300) if 0 not in [i%n for n in range(2, i)]])
+    p = primes[random.randint(0,len(primes) -1)]
+
+    random_a = []
+    random_b = []
+    for index in range(0, k):
+        random_a.append(random.randint(0,k))
+        random_b.append(random.randint(0,k))
+
+    # print("column a: ", random_a)
+    # print("column b: ", random_b)
+
+    hash_functions = []
+    for row in range(0, len_binary_values):
+        hash_function = []
+        for r in range(0, k):
+            hash_value = np.int((random_a[r] + random_b[r] * row) % p)
+            hash_function.append(hash_value)
+        hash_functions.append(hash_function)
+
+    # create signature matrix
+    inf_list = [np.inf] * k
+    signature = {}
+    for key, value in binary_dict.items():
+        signature[key] = inf_list
+        # if key < 3:
+        #     print(signature[key])
+        for index in range(0, len(binary_dict[key])):
+            if binary_dict[key][index] == 1:
+                signature[key] = np.where(hash_functions[index] < signature[key], hash_functions[index], signature[key])
+                # if key == 1:
+                #     print("hash function ", hash_functions[index])
+                # print("updated signature ", key, signature[key])
+        signature[key] = [np.int(k) for k in signature[key]]
+        
+
+    return signature
+    
+    def find_b_t(n, r):
+
+    b = math.floor(n/r)
+    t = math.pow((1/b), (1/r))
+
+    return b, t
+    
+    
+    def LSH(signature, b, r, len_signature_values):
+
+    nHash = len_signature_values
+    # print(nHash)
+    # assert (nHash % b == 0)
+    # assert (b * r == nHash)
+
+    # items_del = nHash - b*r
+
+    # print(signature.keys())
+
+    # put columns in buckets
+    buckets = {}
+    for key, value in signature.items():
+        # del value[len(value) - items_del:]
+        # print(len(value))
+        splitted = np.array_split(value, b)
+        for index in range(0, b):
+            new_key = splitted[index].tobytes()
+            if new_key in buckets:
+                # print(buckets[new_key])
+                buckets[new_key].add(key)
+                # print(buckets[new_key])
+            else:
+                new_bucket = set()
+                new_bucket.add(key)
+                buckets[new_key] = new_bucket
+
+    candidate_pairs = set()    
+
+    # create final candidate pairs (given + hashed to same bucket)
+    for key, value in buckets.items():
+        if len(buckets[key]) > 1:
+            bucket = [e for e in buckets[key]]
+            for index in range(0, len(bucket)):
+                for jndex in range(index + 1, len(bucket)):
+                    if index == len(bucket):
+                        continue
+                    if isinstance(bucket[index], np.int) and isinstance(bucket[jndex], np.int):
+                        new_bucket = []
+                        new_bucket.append(bucket[index])
+                        new_bucket.append(bucket[jndex])
+                        new_bucket = sorted(new_bucket)
+                        candidate_pairs.add((new_bucket[0], new_bucket[1]))
+                    elif isinstance(bucket[index], np.int):
+                        integers = bucket[jndex].split(', ')
+                        temp_list = []
+                        for integer in integers:
+                            temp_list.append(np.int(integer))
+                        temp_list.append(bucket[index])
+                        temp_list = sorted(temp_list)
+                        for a in range(0, len(temp_list)):
+                            for b in range(a + 1, len(temp_list)):
+                                if (temp_list[b], temp_list[a]) not in candidate_pairs:
+                                    candidate_pairs.add((temp_list[a], temp_list[b]))
+
+                    elif isinstance(bucket[jndex], np.int):
+                        integers = bucket[index].split(', ')
+                        temp_list = []
+                        for integer in integers:
+                            temp_list.append(np.int(integer))
+                        temp_list.append(bucket[jndex])
+                        temp_list = sorted(temp_list)
+                        for c in range(0, len(temp_list)):
+                            for d in range(c + 1, len(temp_list)):
+                                if (temp_list[d], temp_list[c]) not in candidate_pairs:
+                                    candidate_pairs.add((temp_list[c], temp_list[d]))
+                    else:
+                        integers = bucket[index].split(', ') + bucket[jndex].split(', ')
+                        numbers = []
+                        for integer in integers:
+                            numbers.append(np.int(integer))
+                        numbers = sorted(numbers)
+                        for e in range(0, len(numbers)):
+                            for f in range(e + 1, len(numbers)):
+                                if (numbers[f], numbers[e]) not in candidate_pairs:
+                                    # print(numbers[e], numbers[f])
+                                    # print(len(candidate_pairs))
+                                    candidate_pairs.add((numbers[e], numbers[f]))
+                                    # print(candidate_pairs)
+                                    # print(len(candidate_pairs))
+
+    # candidate pairs by modelID
+    candidate_pairs_modelID = set()
+    for key, value in signature.items():
+        if not isinstance(key, np.int) and key not in buckets.keys():
+            integers = key.split(', ')
+            integers = sorted(integers)
+            for i in range(0, len(integers)):
+                for j in range(i+1, len(integers)):
+                    item1 = np.int(integers[i])
+                    item2 = np.int(integers[j])
+                    if (item2, item1) not in candidate_pairs_modelID:
+                        candidate_pairs.add((item1, item2))
+                        candidate_pairs_modelID.add((item1, item2))
+
+
+    return candidate_pairs, candidate_pairs_modelID
+    
+    
+    def shingles(text, length):
+    return [text[i:i + length] for i in range(len(text) - length + 1)]
+
+
+def clean_title_for_comparing(titles, brands, modelIDs, item):
+    title = titles[item]
+    
+    title = title.replace('IH', 'inch')
+    title = title.replace('newegg -', '')
+    title = title.replace('- newegg', '')
+    title = title.replace('- best buy', '')
+    title = title.replace('- thenerds', '')
+    title = title.replace('diag.', '')
+    title = title.replace('class', '')
+    title = title.replace('led', '')
+    title = title.replace('electronics', '')
+    title = title.replace('group', '')
+
+    try:
+        brand = brands[item]
+    except KeyError:
+        brand = ''
+    
+    try:
+        modelID = modelIDs[item]
+    except KeyError:
+        modelID = ''
+
+    if brand.lower() in title:
+        title = title.replace(brand.lower(), '')
+    if modelID.lower() in title:
+        title = title.replace(modelID.lower(), '')
+
+    return title
+    
+    def calcDistance_Jaccard(title1, title2, length):
+    tokens1 = set(shingles(title1, length))
+    tokens2 = set(shingles(title2, length))
+
+    intersection = []
+    for token in tokens1:
+        if token in tokens2:
+            intersection.append(token)
+    
+    union = list(tokens1.union(tokens2))
+
+    Jaccard = 1 - (len(intersection)/len(union))
+
+    return Jaccard
+
+
+def calcDistance_Cosine(title1, title2, length):
+    tokens1 = set(shingles(title1, length))
+    tokens2 = set(shingles(title2, length))
+
+    intersection = []
+    for token in tokens1:
+        if token in tokens2:
+            intersection.append(token)
+
+    Cosine = len(intersection)/(np.sqrt(len(tokens1))*np.sqrt(len(tokens2)))
+
+    return Cosine
+    
+    
+    # create distance matrix
+def create_DissimilarityMatrix(candidate_pairs, candidate_pairs_modelID, titles, shops, brands, length):
+
+    # maps how the keys relate to the indeces of the distance matrix 'result'
+    possible_indeces = range(0, len(titles))
+    mapping = {}
+    indeces_taken = []
+    for pair in candidate_pairs:
+        for key in pair:
+            for index in possible_indeces:
+                if key not in mapping.keys():
+                    if index not in indeces_taken:
+                        mapping.update({key: index})
+                        indeces_taken.append(index)
+                        break
+    # print(mapping)
+
+    nItems = len(mapping.keys())
+    # print("size of distance matrix: ", nItems, "which is the number of unique keys/TVs in candidate pairs")
+    result = np.full((nItems, nItems), 9999, dtype=float)
+    np.fill_diagonal(result, 0)
+
+    tracker = set()
+    for pair in candidate_pairs_modelID:
+        for i in range(0, len(pair)):
+            for j in range(i + 1, len(pair)):
+                pair = sorted(pair)
+                item1 = np.int(pair[i])
+                item2 = np.int(pair[j])
+                if item1 < item2:
+                    tracker.add((item1, item2))
+                else:
+                    tracker.add((item2, item1))
+                result[mapping[item1], mapping[item2]] = 0
+                if shops[item1] == shops[item2]:
+                    result[mapping[item1], mapping[item2]] = 9999
+                if item1 in brands.keys() and item2 in brands.keys():
+                    if brands[item1] != brands[item2]:
+                        result[mapping[item1], mapping[item2]] = 9999
+
+    for pair in candidate_pairs:
+        for i in range(0, len(pair)):
+            for j in range(i + 1, len(pair)):
+                pair = sorted(pair)
+                item1 = np.int(pair[i])
+                item2 = np.int(pair[j])
+                if (item1, item2) in tracker or (item2, item1) in tracker:
+                    continue
+                result[mapping[item1], mapping[item2]] = calcDistance_Jaccard(titles[item1],titles[item2],length)
+                if shops[item1] == shops[item2]:
+                    result[mapping[item1], mapping[item2]] = 9999
+                if item1 in brands.keys() and item2 in brands.keys():
+                        if brands[item1] != brands[item2]:
+                            result[mapping[item1], mapping[item2]] = 9999
+   
+    return result, mapping
+
+# create distance matrix
+def get_final_pairs(candidate_pairs, candidate_pairs_modelID, titles, shops, brands, modelIDs, length):
+
+    final_pairs = set()
+    for pair in candidate_pairs:
+        if pair in candidate_pairs_modelID:
+            item1 = 0
+            item2 = 0
+            if pair[0] < pair[1]:
+                item1 = np.int(pair[0])
+                item2 = np.int(pair[1])
+            else:
+                item1 = np.int(pair[1])
+                item2 = np.int(pair[0])
+            if shops[item1] == shops[item2]:
+                    continue
+            if item1 in brands.keys() and item2 in brands.keys():
+                if brands[item1] != brands[item2]:
+                    continue
+            final_pairs.add((item1, item2))
+        else:
+            item1 = 0
+            item2 = 0
+            if pair[0] < pair[1]:
+                item1 = np.int(pair[0])
+                item2 = np.int(pair[1])
+            else:
+                item1 = np.int(pair[1])
+                item2 = np.int(pair[0])
+            if shops[item1] == shops[item2]:
+                    continue
+            if item1 in brands.keys() and item2 in brands.keys():
+                if brands[item1] != brands[item2]:
+                    continue
+            distance = calcDistance_Jaccard(clean_title_for_comparing(titles, brands, modelIDs, item1), clean_title_for_comparing(titles, brands, modelIDs, item2), length)
+            if distance < 0.5:
+                final_pairs.add((item1, item2))
+   
+    return final_pairs
+
+
+def cluster(distance_matrix, t, mapping):
+    linkage = AgglomerativeClustering(n_clusters=None, affinity="precomputed",
+                                      linkage='average', distance_threshold=t)
+    clusters = linkage.fit_predict(distance_matrix)
+    cluster_dict = {}
+
+    for indexx, clusternr in enumerate(clusters):
+        if clusternr in cluster_dict:
+            cluster_dict[clusternr] = np.append(cluster_dict[clusternr], list(mapping.keys())[list(mapping.values()).index(indexx)])
+            # print(indexx, cluster_dict[clusternr])
+        else:
+            cluster_dict[clusternr] = np.array([list(mapping.keys())[list(mapping.values()).index(indexx)]])
+            # print(clusternr, cluster_dict[clusternr])
+
+    # print("cluster dictionary: ", cluster_dict)
+
+    final_pairs = set()
+    for candidate_pair in cluster_dict.values():
+        if len(candidate_pair) > 1:
+            for i, item1 in enumerate(candidate_pair):
+                for j in range(i + 1, len(candidate_pair)):
+                    if (candidate_pair[i] < candidate_pair[j]):
+                        final_pairs.add((candidate_pair[i], candidate_pair[j]))
+                    else:
+                        final_pairs.add((candidate_pair[j], candidate_pair[i]))
+
+    # print("final candidate pairs ", final_pairs)
+    return final_pairs
+    
+    def evaluate(candidate_pairs_LSH,candidate_pairs_cluster, modelIDs):
+    tpLSH=0
+    tpCluster=0
+    for pair in candidate_pairs_LSH:
+        item1 = np.int(pair[0])
+        item2 = np.int(pair[1])
+        if modelIDs[item1] == modelIDs[item2]:
+            tpLSH = tpLSH + 1
+    for pair in candidate_pairs_cluster:
+        item1 = np.int(pair[0])
+        item2 = np.int(pair[1])
+        if modelIDs[item1] == modelIDs[item2]:
+            tpCluster = tpCluster + 1
+
+    print("true positives LSH: ", tpLSH)
+    print("true positives Cluster: ", tpCluster)
+
+    numberofduplicates = 0
+    list_modelIDs = []
+    for key, value in modelIDs.items():
+        list_modelIDs.append(value)
+
+    for key, value in modelIDs.items():
+        count = list_modelIDs.count(value)
+        if count == 2:
+            numberofduplicates = numberofduplicates + 1
+        elif count == 3:
+            numberofduplicates = numberofduplicates + 3
+        elif count == 4:
+            numberofduplicates = numberofduplicates + 6
+
+    # Cluster
+    precisionCluster = tpCluster / (len(candidate_pairs_cluster) + +0.000001)
+    recallCluster = tpCluster / (numberofduplicates +0.000001)
+    F1 = 2 * (precisionCluster * recallCluster)/(precisionCluster + recallCluster +0.000001)
+
+    # LSH
+    PQ = tpLSH / (len(candidate_pairs_LSH) +0.000001)
+    PC = tpLSH / (numberofduplicates +0.000001)
+    F1Star = 2*(PQ*PC)/(PQ+PC +0.000001)
+
+    # fraction of comparisons
+    N = len(modelIDs)
+    totalComparisons = N*(N-1)/2
+    print("total comparisons ", totalComparisons)
+    print("length of candidate pairs LSH ", len(candidate_pairs_LSH))
+    fraction = len(candidate_pairs_LSH) / totalComparisons
+    return PC, PQ, F1Star, precisionCluster, recallCluster, F1, fraction
+
+def calculate_avg(results : list):
+    avg = []
+    for i in range(0,len(results[0])): # number of r's
+        column = 0
+        for j in range(0,len(results)): # number of bootstraps
+            column +=results[j][i]
+
+        avg.append(column/len(results))
+    return avg
+    
+    
+#### Code to run ####
+random.seed(10)
+repeats = 0
+list_PC_final = []
+list_PQ_final = []
+list_recall_final = []
+list_precision_final = []
+list_fraction_final = []
+list_F1_final = []
+list_F1star_final = []
+
+while repeats <= 10:
+    list_PC = []
+    list_PQ = []
+    list_recall = []
+    list_precision = []
+    list_fraction = []
+    list_F1 = []
+    list_F1star = []
+
+    print("This is the", repeats + 1,"bootstrap")
+    train, test = bootstrap()
+
+    # I do not tune any hyperparameter, so I will use bootstrapping,
+    # but will compute evaluation scores based on the 63% of TVs train set
+    total_dict = bigDictionary(data)
+    total_dict_bootstrap = {}
+    for key, value in total_dict.items():
+        if key in train:
+            total_dict_bootstrap.update({key: value})
+
+    # create dictionaries
+    shops, modelIDs, modelIDs_titles, titles, features, brands = indivDictionaries(total_dict_bootstrap)
+
+    # clean dictionaries
+    for key, value in shops.items():
+        shops[key] = cleanshop(value)
+
+    for key,value in titles.items():
+        titles[key] = cleantitle(value)
+
+    for key,value in features.items():
+        for i in features[key]:
+            features[key][i] = cleanfeatures(features[key][i])
+
+    for index in range(0, len(brands_list)):
+        brands_list[index] = brands_list[index].lower()
+
+
+    # get model words
+    model_words_titles, brands, modelIDs_titles = get_model_words_titles(titles, brands_list, brands, modelIDs_titles) 
+    model_words_features = get_model_words_features(features, brands_list)
+
+    unique_model_words_titles = get_unique_list_model_words_titles(model_words_titles) # list, 1324
+    unique_model_words_features = get_unique_list_model_words_features(model_words_features) # list, 4462
+    unique_model_words_total = get_unique_list_model_words_total(unique_model_words_features, unique_model_words_titles) # list, 5568
+
+    # merge two TVs with same modelID
+    modelIDs_titles, merged_model_words_titles = merge_TVs(modelIDs_titles, model_words_titles, shops)
+
+    # create binary dictionary
+    binary_dict = create_binary_dict(unique_model_words_total, merged_model_words_titles, model_words_features)
+
+    # create signature matrix
+    signature_dict = create_signature_dict(binary_dict, 0.5)
+
+    # compute the length of the signature
+    len_signature_values = 0
+    for key in signature_dict.keys():
+        len_signature_values = len(signature_dict[key])
+        break
+    
+    r_list = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
+
+    for r in r_list:
+        # find candidate pairs for different number of rows per band
+        b, t = find_b_t(len_signature_values, r)
+        print("r, b and t: ", r, b, t)
+        candidate_pairs, candidate_pairs_modelID = LSH(signature_dict, b, r, len_signature_values)
+        print("number of candidate pairs: ", len(candidate_pairs), "and number of modelID candidate pairs: ", len(candidate_pairs_modelID))
+        print("the modelID candidate pairs are: ", candidate_pairs_modelID)
+
+        # create distance matrix & cluster
+        # distance_matrix, mapping = create_DissimilarityMatrix(candidate_pairs, candidate_pairs_modelID, titles, shops, brands, 3)
+        # final_pairs = cluster(distance_matrix, 0.5, mapping)
+        final_pairs = get_final_pairs(candidate_pairs, candidate_pairs_modelID, titles, shops, brands, modelIDs, 3)
+        print("number of final candidate pairs: ", len(final_pairs))
+
+        # evaluate
+        PC, PQ, F1Star, precisionCluster, recallCluster, F1, fraction = evaluate(candidate_pairs, final_pairs, modelIDs)
+        
+        print("F1 is: ", F1)
+        print("PQ star is: ", PQ)
+        print("PC star is: ", PC)
+        print("F1 star is: ", F1Star)
+        print("precision: ", precisionCluster)
+        print("recall is: ", recallCluster)
+        print("fraction of comparison is: ", fraction)
+
+
+        if r == 20:
+            list_PC_final.append(list_PC)
+            list_PQ_final.append(list_PQ)
+            list_recall_final.append(list_recall)
+            list_precision_final.append(list_precision)
+            list_fraction_final.append(list_fraction)
+            list_F1_final.append(list_F1)
+            list_F1star_final.append(list_F1star)
+
+    # print("PC is: ", PC)
+    # print("PQ is: ", PQ)
+    # print("F1* is: ",F1Star)
+    # print("precision is: ", precisionCluster)
+    # print("recall is: ", recallCluster)
+    print("F1 is: ", F1)
+    print("fraction of comparison is: ", fraction)
+
+    repeats = repeats + 1
+
+print(list_PC_final)
+print(list_PQ_final)
+print(list_recall_final)
+print(list_precision_final)
+print(list_fraction_final)
+print(list_F1_final)
+print(list_F1star_final)
+
+#### code for plots ####
+plt.plot(calculate_avg(list_fraction_final), calculate_avg(list_PC_final))
+plt.ylabel('Pair completeness')
+plt.xlabel('Fraction of comparisons')
+plt.show
+
+plt.plot(calculate_avg(list_fraction_final), calculate_avg(list_PQ_final))
+plt.ylabel('Pair quality')
+plt.xlabel('Fraction of comparisons')
+plt.show
+
+plt.plot(calculate_avg(list_fraction_final), calculate_avg(list_F1star_final))
+plt.ylabel('F1*-measure')
+plt.xlabel('Fraction of comparisons')
+plt.show
+
+plt.plot(calculate_avg(list_fraction_final), calculate_avg(list_F1_final))
+plt.ylabel('F1-measure')
+plt.xlabel('Fraction of comparisons')
+plt.show
+    
+    
+    
+    
+    
+
+
