@@ -80,7 +80,7 @@ def indivDictionaries(TVs):
     return shop_dict, modelID_dict, modelID_title_dict, title_dict, features_dict, brands_dict
 
 
-# %% cleaning
+ ### DATA CLEANING ###
 def replaceunit(x):
     hz = [r'Hertz', 'hertz', 'Hz', 'HZ', ' hz', '-hz', 'hz']
     for item in hz:
@@ -205,6 +205,9 @@ def stripfeatures(x):
 
     return x
     
+    
+### GET MODEL WORDS ###
+
     def get_model_words_titles(titles, brands_temp_list, brands, modelIDs_title): # dictionary - not unique values
     model_words_titles = {}
     for key, value in titles.items():
@@ -240,6 +243,21 @@ def stripfeatures(x):
             # print("find all model words from temp_list (should be the individual model words): ", )
 
     return model_words_titles, brands, modelIDs_title
+
+def get_model_words_titles_without(titles): # dictionary - not unique values
+    model_words_titles = {}
+    for key, value in titles.items():
+        temp_list = []
+        model_word_options = re.findall('([a-zA-Z0-9]*(([0-9]+[^0-9, ]+)|([^0-9, ]+[0-9]+))[a-zA-Z0-9]*)', value) # add 'standard' model words from titlelo
+        for index in range(0,len(model_word_options)):
+            if key in model_words_titles:
+                temp_list.append(model_word_options[index][0])
+                model_words_titles[key] = temp_list
+            else:
+                model_words_titles[key] = model_word_options[index][0]
+                temp_list.append(model_word_options[index][0])
+
+    return model_words_titles
 
 
 def get_model_words_features(features, brands_temp_list): # dictionary - not unique values
@@ -283,14 +301,60 @@ def get_model_words_features(features, brands_temp_list): # dictionary - not uni
     return model_words_features
     
     
-    def get_unique_list_model_words_titles(model_words_titles):
+def get_model_words_features_without(features): # dictionary - not unique values
+    model_words_features = {}
+    for key, value in features.items():
+        temp_list = []
+        for k, v in features[key].items():
+            if re.findall('([a-zA-Z0-9]*(([0-9]+[^0-9, ]+)|([^0-9, ]+[0-9]+))[a-zA-Z0-9]*)', v) != []: # finds decimals, integers/decimals attached to letters or special tokens
+                model_word_options = re.findall('([a-zA-Z0-9]*(([0-9]+[^0-9, ]+)|([^0-9, ]+[0-9]+))[a-zA-Z0-9]*)', v)
+                for index in range(0,len(model_word_options)):
+                    if key in model_words_features:
+                        temp_list.append(stripfeatures(model_word_options[index][0]))                       
+                        model_words_features[key] = temp_list
+                    else:
+                        model_words_features[key] = model_word_options[index][0]
+                        temp_list.append(stripfeatures(model_word_options[index][0]))
+            if re.findall('^\.[0-9]+ ', v) != []: # additionally finds integers (stand alone)
+                model_word_integer_options = re.findall('^\.*[0-9]+ ', v)[0].strip()
+                for index in range(0, len(model_word_integer_options)):
+                    if key in model_words_features:
+                        temp_list.append(stripfeatures(model_word_integer_options[index][0]))
+                        model_words_features[key] = temp_list
+                    else:
+                        model_words_features[key] = model_word_integer_options[index][0]
+                        temp_list.append(stripfeatures(model_word_integer_options[index][0]))
+        try:
+            test = model_words_features[key]
+            continue
+        except KeyError:
+            model_words_features[key] = []
+
+    return model_words_features
+    
+def get_unique_list_model_words_titles(model_words_titles):
+unique_list = []
+for key, value in model_words_titles.items():
+    for index in range(0,len(value)):
+        if value[index] not in unique_list:
+            unique_list.append(value[index])
+
+    return unique_list
+    
+def get_unique_list_model_words_titles_noSingles(model_words_titles):
     unique_list = []
     for key, value in model_words_titles.items():
         for index in range(0,len(value)):
-            if value[index] not in unique_list:
-                unique_list.append(value[index])
+            unique_list.append(value[index])
 
-    return unique_list
+    unique_list_noSingles = []
+    for word in unique_list:
+        count = unique_list.count(word)
+        if count > 1:
+            if word not in unique_list_noSingles:
+                unique_list_noSingles.append(word)       
+
+    return unique_list_noSingles
 
 def get_unique_list_model_words_features(model_words_features):
     unique_list = []
@@ -300,6 +364,21 @@ def get_unique_list_model_words_features(model_words_features):
                 unique_list.append(value[index])
 
     return unique_list
+    
+def get_unique_list_model_words_features_noSingles(model_words_features):
+    unique_list = []
+    for key, value in model_words_features.items():
+        for index in range(0,len(value)):
+            unique_list.append(value[index])
+
+    unique_list_noSingles = []
+    for word in unique_list:
+        count = unique_list.count(word)
+        if count > 1:
+            if word not in unique_list_noSingles:
+                unique_list_noSingles.append(word)
+
+    return unique_list_noSingles
 
 def get_unique_list_model_words_total(unique_model_words_features, unique_model_words_titles):
     unique_list = []
@@ -312,7 +391,10 @@ def get_unique_list_model_words_total(unique_model_words_features, unique_model_
     
     return unique_list
     
-    # merge two TVs with same modelID
+    
+    
+### MERGE TVS WITH THE SAME MODEL ID ###
+
 def merge_TVs(modelIDs_titles, model_words_titles, shops):
     # print(model_words_titles)
     temp = defaultdict(list)
@@ -392,69 +474,74 @@ def merge_TVs(modelIDs_titles, model_words_titles, shops):
     return res, merged_model_words_titles 
     
     
-    def create_binary_dict(unique_model_words, merged_model_words_titles, model_words_features):
-    binary_dict = {}
-    for key in merged_model_words_titles.keys():
-        list = [0] * (len(unique_model_words))
-        for index in range(0, len(unique_model_words)):
-            if isinstance(key, np.int):
-                if unique_model_words[index] in model_words_features[key] or unique_model_words[index] in merged_model_words_titles[key]:
+    
+### CREATE BINARY DICTIONARY ###
+    
+def create_binary_dict(unique_model_words, merged_model_words_titles, model_words_features):
+binary_dict = {}
+for key in merged_model_words_titles.keys():
+    list = [0] * (len(unique_model_words))
+    for index in range(0, len(unique_model_words)):
+        if isinstance(key, np.int):
+            if unique_model_words[index] in model_words_features[key] or unique_model_words[index] in merged_model_words_titles[key]:
+                list[index] = 1
+                continue
+        else:
+            integers = key.split(', ')
+            for integer in integers:
+                if unique_model_words[index] in model_words_features[np.int(integer)] or unique_model_words[index] in merged_model_words_titles[key]:
                     list[index] = 1
-                    continue
-            else:
-                integers = key.split(', ')
-                for integer in integers:
-                    if unique_model_words[index] in model_words_features[np.int(integer)] or unique_model_words[index] in merged_model_words_titles[key]:
-                        list[index] = 1
-                        break
-        binary_dict[key] = list        
+                    break
+    binary_dict[key] = list        
     return binary_dict
     
     
-    def create_signature_dict(binary_dict, shrinkage):
-    # create minhash functions
-    len_binary_values = 0
-    for key in binary_dict.keys():
-        len_binary_values = len(binary_dict[key])
-        break
+    
+### CREATE SIGNATURE MATRIX ###
+def create_signature_dict(binary_dict, shrinkage):
+# create minhash functions
+len_binary_values = 0
+for key in binary_dict.keys():
+    len_binary_values = len(binary_dict[key])
+    break
 
-    k = math.ceil(shrinkage * len_binary_values)
-    if k % 2 != 0:
-        k = k + 1
-    primes = ([i for i in range(k+1, k + 300) if 0 not in [i%n for n in range(2, i)]])
-    p = primes[random.randint(0,len(primes) -1)]
+k = math.ceil(shrinkage * len_binary_values)
+if k % 2 != 0:
+    k = k + 1
+primes = ([i for i in range(k+1, k + 300) if 0 not in [i%n for n in range(2, i)]])
+p = primes[random.randint(0,len(primes) -1)]
 
-    random_a = []
-    random_b = []
-    for index in range(0, k):
-        random_a.append(random.randint(0,k))
-        random_b.append(random.randint(0,k))
+random_a = []
+random_b = []
+for index in range(0, k):
+    random_a.append(random.randint(0,k))
+    random_b.append(random.randint(0,k))
 
-    # print("column a: ", random_a)
-    # print("column b: ", random_b)
+# print("column a: ", random_a)
+# print("column b: ", random_b)
 
-    hash_functions = []
-    for row in range(0, len_binary_values):
-        hash_function = []
-        for r in range(0, k):
-            hash_value = np.int((random_a[r] + random_b[r] * row) % p)
-            hash_function.append(hash_value)
-        hash_functions.append(hash_function)
+hash_functions = []
+for row in range(0, len_binary_values):
+    hash_function = []
+    for r in range(0, k):
+        hash_value = np.int((random_a[r] + random_b[r] * row) % p)
+        hash_function.append(hash_value)
+    hash_functions.append(hash_function)
 
-    # create signature matrix
-    inf_list = [np.inf] * k
-    signature = {}
-    for key, value in binary_dict.items():
-        signature[key] = inf_list
-        # if key < 3:
-        #     print(signature[key])
-        for index in range(0, len(binary_dict[key])):
-            if binary_dict[key][index] == 1:
-                signature[key] = np.where(hash_functions[index] < signature[key], hash_functions[index], signature[key])
-                # if key == 1:
-                #     print("hash function ", hash_functions[index])
-                # print("updated signature ", key, signature[key])
-        signature[key] = [np.int(k) for k in signature[key]]
+# create signature matrix
+inf_list = [np.inf] * k
+signature = {}
+for key, value in binary_dict.items():
+    signature[key] = inf_list
+    # if key < 3:
+    #     print(signature[key])
+    for index in range(0, len(binary_dict[key])):
+        if binary_dict[key][index] == 1:
+            signature[key] = np.where(hash_functions[index] < signature[key], hash_functions[index], signature[key])
+            # if key == 1:
+            #     print("hash function ", hash_functions[index])
+            # print("updated signature ", key, signature[key])
+    signature[key] = [np.int(k) for k in signature[key]]
         
 
     return signature
@@ -467,7 +554,9 @@ def merge_TVs(modelIDs_titles, model_words_titles, shops):
     return b, t
     
     
-    def LSH(signature, b, r, len_signature_values):
+    
+### PERFORM LSH ###
+def LSH(signature, b, r, len_signature_values):
 
     nHash = len_signature_values
     # print(nHash)
@@ -567,7 +656,9 @@ def merge_TVs(modelIDs_titles, model_words_titles, shops):
     return candidate_pairs, candidate_pairs_modelID
     
     
-    def shingles(text, length):
+### PREPARE DATA FOR THE CLUSTERING
+    
+def shingles(text, length):
     return [text[i:i + length] for i in range(len(text) - length + 1)]
 
 
@@ -602,7 +693,10 @@ def clean_title_for_comparing(titles, brands, modelIDs, item):
 
     return title
     
-    def calcDistance_Jaccard(title1, title2, length):
+    
+### COMPUTE JACCARD DISTANCE ###
+    
+def calcDistance_Jaccard(title1, title2, length):
     tokens1 = set(shingles(title1, length))
     tokens2 = set(shingles(title2, length))
 
@@ -632,7 +726,7 @@ def calcDistance_Cosine(title1, title2, length):
     return Cosine
     
     
-    # create distance matrix
+### CREATE DISTANCE MATRIX ###
 def create_DissimilarityMatrix(candidate_pairs, candidate_pairs_modelID, titles, shops, brands, length):
 
     # maps how the keys relate to the indeces of the distance matrix 'result'
@@ -730,6 +824,8 @@ def get_final_pairs(candidate_pairs, candidate_pairs_modelID, titles, shops, bra
     return final_pairs
 
 
+### PERFORM FINAL CLUSTERING ###
+
 def cluster(distance_matrix, t, mapping):
     linkage = AgglomerativeClustering(n_clusters=None, affinity="precomputed",
                                       linkage='average', distance_threshold=t)
@@ -759,7 +855,10 @@ def cluster(distance_matrix, t, mapping):
     # print("final candidate pairs ", final_pairs)
     return final_pairs
     
-    def evaluate(candidate_pairs_LSH,candidate_pairs_cluster, modelIDs):
+    
+### EVALUATION METRICS ###
+    
+def evaluate(candidate_pairs_LSH,candidate_pairs_cluster, modelIDs):
     tpLSH=0
     tpCluster=0
     for pair in candidate_pairs_LSH:
@@ -808,6 +907,8 @@ def cluster(distance_matrix, t, mapping):
     fraction = len(candidate_pairs_LSH) / totalComparisons
     return PC, PQ, F1Star, precisionCluster, recallCluster, F1, fraction
 
+
+### COMPUTE BOOTSTRAP AVERAGE FOR THE PLOTS ###
 def calculate_avg(results : list):
     avg = []
     for i in range(0,len(results[0])): # number of r's
@@ -819,7 +920,7 @@ def calculate_avg(results : list):
     return avg
     
     
-#### Code to run ####
+### CODE TO RUN - FULL MODEL ###
 random.seed(10)
 repeats = 0
 list_PC_final = []
@@ -830,7 +931,7 @@ list_fraction_final = []
 list_F1_final = []
 list_F1star_final = []
 
-while repeats <= 10:
+while repeats <= 49:
     list_PC = []
     list_PQ = []
     list_recall = []
@@ -938,33 +1039,292 @@ while repeats <= 10:
 
     repeats = repeats + 1
 
-print(list_PC_final)
-print(list_PQ_final)
-print(list_recall_final)
-print(list_precision_final)
-print(list_fraction_final)
-print(list_F1_final)
-print(list_F1star_final)
+### NO SINGLES MODEL ###
+random.seed(10)
+repeats = 0
+list_PC_final = []
+list_PQ_final = []
+list_recall_final = []
+list_precision_final = []
+list_fraction_final = []
+list_F1_final = []
+list_F1star_final = []
 
-#### code for plots ####
-plt.plot(calculate_avg(list_fraction_final), calculate_avg(list_PC_final))
+while repeats <= 49:
+    list_PC = []
+    list_PQ = []
+    list_recall = []
+    list_precision = []
+    list_fraction = []
+    list_F1 = []
+    list_F1star = []
+
+    print("This is the", repeats + 1,"bootstrap")
+    train, test = bootstrap()
+
+    # I do not tune any hyperparameter, so I will use bootstrapping,
+    # but will compute evaluation scores based on the 63% of TVs train set
+    total_dict = bigDictionary(data)
+    total_dict_bootstrap = {}
+    for key, value in total_dict.items():
+        if key in train:
+            total_dict_bootstrap.update({key: value})
+
+    # create dictionaries
+    shops, modelIDs, modelIDs_titles, titles, features, brands = indivDictionaries(total_dict_bootstrap)
+
+    # clean dictionaries
+    for key, value in shops.items():
+        shops[key] = cleanshop(value)
+
+    for key,value in titles.items():
+        titles[key] = cleantitle(value)
+
+    for key,value in features.items():
+        for i in features[key]:
+            features[key][i] = cleanfeatures(features[key][i])
+
+    for index in range(0, len(brands_list)):
+        brands_list[index] = brands_list[index].lower()
+
+
+    # get model words
+    model_words_titles, brands, modelIDs_titles = get_model_words_titles(titles, brands_list, brands, modelIDs_titles) 
+    model_words_features = get_model_words_features(features, brands_list)
+
+    # with singles
+    unique_model_words_titles = get_unique_list_model_words_titles(model_words_titles) # list, 1324
+    unique_model_words_features = get_unique_list_model_words_features(model_words_features) # list, 4462
+    unique_model_words_total = get_unique_list_model_words_total(unique_model_words_features, unique_model_words_titles) # list, 5568
+
+    # without singles
+    # unique_model_words_titles = get_unique_list_model_words_titles_noSingles(model_words_titles) # list, 1324
+    # unique_model_words_features = get_unique_list_model_words_features_noSingles(model_words_features) # list, 4462
+    # unique_model_words_total = get_unique_list_model_words_total(unique_model_words_features, unique_model_words_titles) # list, 5568
+
+    # merge two TVs with same modelID
+    modelIDs_titles, merged_model_words_titles = merge_TVs(modelIDs_titles, model_words_titles, shops)
+
+    # create binary dictionary
+    binary_dict = create_binary_dict(unique_model_words_total, merged_model_words_titles, model_words_features)
+
+    # create signature matrix
+    signature_dict = create_signature_dict(binary_dict, 0.5)
+
+    # compute the length of the signature
+    len_signature_values = 0
+    for key in signature_dict.keys():
+        len_signature_values = len(signature_dict[key])
+        break
+    
+    r_list = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
+
+    for r in r_list:
+        # find candidate pairs for different number of rows per band
+        b, t = find_b_t(len_signature_values, r)
+        print("r, b and t: ", r, b, t)
+        candidate_pairs, candidate_pairs_modelID = LSH(signature_dict, b, r, len_signature_values)
+        print("number of candidate pairs: ", len(candidate_pairs), "and number of modelID candidate pairs: ", len(candidate_pairs_modelID))
+        print("the modelID candidate pairs are: ", candidate_pairs_modelID)
+
+        # create distance matrix & cluster
+        # distance_matrix, mapping = create_DissimilarityMatrix(candidate_pairs, candidate_pairs_modelID, titles, shops, brands, 3)
+        # final_pairs = cluster(distance_matrix, 0.5, mapping)
+        final_pairs = get_final_pairs(candidate_pairs, candidate_pairs_modelID, titles, shops, brands, modelIDs, 3)
+        print("number of final candidate pairs: ", len(final_pairs))
+
+        # evaluate
+        PC, PQ, F1Star, precisionCluster, recallCluster, F1, fraction = evaluate(candidate_pairs, final_pairs, modelIDs)
+ 
+        list_PC.append(PC)
+        list_PQ.append(PQ)
+        list_recall.append(recallCluster)
+        list_precision.append(precisionCluster)
+        list_fraction.append(fraction)
+        list_F1.append(F1)
+        list_F1star.append(F1Star)
+
+        print("F1 is: ", F1)
+        print("PQ is: ", PQ)
+        print("PC is: ", PC)
+        print("F1 star is: ", F1Star)
+        print("precision: ", precisionCluster)
+        print("recall is: ", recallCluster)
+        print("fraction of comparison is: ", fraction)
+
+
+        if r == 20:
+            list_PC_final.append(list_PC)
+            list_PQ_final.append(list_PQ)
+            list_recall_final.append(list_recall)
+            list_precision_final.append(list_precision)
+            list_fraction_final.append(list_fraction)
+            list_F1_final.append(list_F1)
+            list_F1star_final.append(list_F1star)
+
+    # print("PC is: ", PC)
+    # print("PQ is: ", PQ)
+    # print("F1* is: ",F1Star)
+    # print("precision is: ", precisionCluster)
+    # print("recall is: ", recallCluster)
+    print("F1 is: ", F1)
+    print("fraction of comparison is: ", fraction)
+
+    repeats = repeats + 1
+
+### WITHOUT MODEL ###
+random.seed(10)
+repeats = 0
+list_PC_final_without = []
+list_PQ_final_without = []
+list_recall_final_without = []
+list_precision_final_without = []
+list_fraction_final_without = []
+list_F1_final_without = []
+list_F1star_final_without = []
+
+while repeats <= 49:
+    list_PC_without = []
+    list_PQ_without = []
+    list_recall_without = []
+    list_precision_without = []
+    list_fraction_without = []
+    list_F1_without = []
+    list_F1star_without = []
+
+    print("This is the", repeats + 1,"bootstrap")
+    train, test = bootstrap()
+
+    # I do not tune any hyperparameter, so I will use bootstrapping,
+    # but will compute evaluation scores based on the 63% of TVs train set
+    total_dict = bigDictionary(data)
+    total_dict_bootstrap = {}
+    for key, value in total_dict.items():
+        if key in train:
+            total_dict_bootstrap.update({key: value})
+
+    # create dictionaries
+    shops, modelIDs, modelIDs_titles, titles, features, brands = indivDictionaries(total_dict_bootstrap)
+
+    # clean dictionaries
+    for key, value in shops.items():
+        shops[key] = cleanshop(value)
+
+    for key,value in titles.items():
+        titles[key] = cleantitle(value)
+
+    for key,value in features.items():
+        for i in features[key]:
+            features[key][i] = cleanfeatures(features[key][i])
+
+    for index in range(0, len(brands_list)):
+        brands_list[index] = brands_list[index].lower()
+
+
+    # get model words
+    model_words_titles = get_model_words_titles_without(titles) 
+    model_words_features = get_model_words_features_without(features)
+
+    unique_model_words_titles = get_unique_list_model_words_titles(model_words_titles) # list, 1324
+    unique_model_words_features = get_unique_list_model_words_features(model_words_features) # list, 4462
+    unique_model_words_total = get_unique_list_model_words_total(unique_model_words_features, unique_model_words_titles) # list, 5568
+
+    # merge two TVs with same modelID
+    # modelIDs_titles, merged_model_words_titles = merge_TVs(modelIDs_titles, model_words_titles, shops)
+
+    # create binary dictionary
+    binary_dict = create_binary_dict_without(unique_model_words_total, model_words_titles, model_words_features)
+
+    # create signature matrix
+    signature_dict = create_signature_dict(binary_dict, 0.5)
+
+    # compute the length of the signature
+    len_signature_values = 0
+    for key in signature_dict.keys():
+        len_signature_values = len(signature_dict[key])
+        break
+    
+    r_list = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
+
+    for r in r_list:
+        # find candidate pairs for different number of rows per band
+        b, t = find_b_t(len_signature_values, r)
+        print("r, b and t: ", r, b, t)
+        candidate_pairs = LSH_without(signature_dict, b, r, len_signature_values)
+        print("number of candidate pairs: ", len(candidate_pairs))
+
+        # create distance matrix & cluster
+        # distance_matrix, mapping = create_DissimilarityMatrix(candidate_pairs, candidate_pairs_modelID, titles, shops, brands, 3)
+        # final_pairs = cluster(distance_matrix, 0.5, mapping)
+        final_pairs = get_final_pairs_without(candidate_pairs, titles, shops, brands, modelIDs, 3)
+        print("number of final candidate pairs: ", len(final_pairs))
+
+        # pas aan dat clustering wel gebeurd + modelIDs
+
+        # evaluate
+        PC, PQ, F1Star, precisionCluster, recallCluster, F1, fraction = evaluate(candidate_pairs, final_pairs, modelIDs)
+ 
+        list_PC_without.append(PC)
+        list_PQ_without.append(PQ)
+        list_recall_without.append(recallCluster)
+        list_precision_without.append(precisionCluster)
+        list_fraction_without.append(fraction)
+        list_F1_without.append(F1)
+        list_F1star_without.append(F1Star)
+
+        print("F1 is: ", F1)
+        print("PQ star is: ", PQ)
+        print("PC star is: ", PC)
+        print("F1 star is: ", F1Star)
+        print("precision: ", precisionCluster)
+        print("recall is: ", recallCluster)
+        print("fraction of comparison is: ", fraction)
+
+
+        if r == 20:
+            list_PC_final_without.append(list_PC)
+            list_PQ_final_without.append(list_PQ)
+            list_recall_final_without.append(list_recall)
+            list_precision_final_without.append(list_precision)
+            list_fraction_final_without.append(list_fraction)
+            list_F1_final_without.append(list_F1)
+            list_F1star_final_without.append(list_F1star)
+
+
+    repeats = repeats + 1
+
+
+### CODE FOR PLOTS ###
+plt.plot(calculate_avg(list_fraction_final), calculate_avg(list_PC_final), label = "with brand and pre-selection")
+plt.plot(calculate_avg(list_fraction_final), calculate_avg(list_PC_final_noSingles), label = "with brand and pre-selection, no singles")
+plt.plot(calculate_avg(list_fraction_final), calculate_avg(list_PC_final_without), label = "without brand and pre-selection")
 plt.ylabel('Pair completeness')
 plt.xlabel('Fraction of comparisons')
+plt.legend(loc = "bottom right")
 plt.show
 
-plt.plot(calculate_avg(list_fraction_final), calculate_avg(list_PQ_final))
+plt.plot(calculate_avg(list_fraction_final), calculate_avg(list_PQ_final), label= "with brand and pre-selection")
+plt.plot(calculate_avg(list_fraction_final), calculate_avg(list_PQ_final_noSingles), label = "with brand and pre-selection, no singles")
+plt.plot(calculate_avg(list_fraction_final), calculate_avg(list_PQ_final_without), label = "without brand and pre-selection")
 plt.ylabel('Pair quality')
 plt.xlabel('Fraction of comparisons')
+plt.legend(loc = "upper right")
 plt.show
 
-plt.plot(calculate_avg(list_fraction_final), calculate_avg(list_F1star_final))
+plt.plot(calculate_avg(list_fraction_final), calculate_avg(list_F1star_final), label= "with brand and pre-selection")
+plt.plot(calculate_avg(list_fraction_final), calculate_avg(list_F1star_final_noSingles), label= "with brand and pre-selection, no singles")
+plt.plot(calculate_avg(list_fraction_final), calculate_avg(list_F1star_final_without), label= "without brand and pre-selection")
 plt.ylabel('F1*-measure')
 plt.xlabel('Fraction of comparisons')
+plt.legend(loc = "upper right")
 plt.show
 
-plt.plot(calculate_avg(list_fraction_final), calculate_avg(list_F1_final))
+plt.plot(calculate_avg(list_fraction_final), calculate_avg(list_F1_final), label= "with brand and pre-selection")
+plt.plot(calculate_avg(list_fraction_final), calculate_avg(list_F1_final_noSingles), label= "with brand and pre-selection, no singles")
+plt.plot(calculate_avg(list_fraction_final), calculate_avg(list_F1_final_without), label= "without brand and pre-selection")
 plt.ylabel('F1-measure')
 plt.xlabel('Fraction of comparisons')
+plt.legend(loc = "bottom right")
 plt.show
     
     
