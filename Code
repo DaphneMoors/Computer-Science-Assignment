@@ -1042,22 +1042,22 @@ while repeats <= 49:
 ### NO SINGLES MODEL ###
 random.seed(10)
 repeats = 0
-list_PC_final = []
-list_PQ_final = []
-list_recall_final = []
-list_precision_final = []
-list_fraction_final = []
-list_F1_final = []
-list_F1star_final = []
+list_PC_final_noSingles = []
+list_PQ_final_noSingles = []
+list_recall_final_noSingles = []
+list_precision_final_noSingles = []
+list_fraction_final_noSingles = []
+list_F1_final_noSingles = []
+list_F1star_final_noSingles = []
 
 while repeats <= 49:
-    list_PC = []
-    list_PQ = []
-    list_recall = []
-    list_precision = []
-    list_fraction = []
-    list_F1 = []
-    list_F1star = []
+    list_PC_noSingles = []
+    list_PQ_noSingles = []
+    list_recall_noSingles = []
+    list_precision_noSingles = []
+    list_fraction_noSingles = []
+    list_F1_noSingles = []
+    list_F1star_noSingles = []
 
     print("This is the", repeats + 1,"bootstrap")
     train, test = bootstrap()
@@ -1136,39 +1136,24 @@ while repeats <= 49:
         # evaluate
         PC, PQ, F1Star, precisionCluster, recallCluster, F1, fraction = evaluate(candidate_pairs, final_pairs, modelIDs)
  
-        list_PC.append(PC)
-        list_PQ.append(PQ)
-        list_recall.append(recallCluster)
-        list_precision.append(precisionCluster)
-        list_fraction.append(fraction)
-        list_F1.append(F1)
-        list_F1star.append(F1Star)
-
-        print("F1 is: ", F1)
-        print("PQ is: ", PQ)
-        print("PC is: ", PC)
-        print("F1 star is: ", F1Star)
-        print("precision: ", precisionCluster)
-        print("recall is: ", recallCluster)
-        print("fraction of comparison is: ", fraction)
+        list_PC_noSingles.append(PC)
+        list_PQ_noSingles.append(PQ)
+        list_recall_noSingles.append(recallCluster)
+        list_precision_noSingles.append(precisionCluster)
+        list_fraction_noSingles.append(fraction)
+        list_F1_noSingles.append(F1)
+        list_F1star_noSingles.append(F1Star)
 
 
         if r == 20:
-            list_PC_final.append(list_PC)
-            list_PQ_final.append(list_PQ)
-            list_recall_final.append(list_recall)
-            list_precision_final.append(list_precision)
-            list_fraction_final.append(list_fraction)
-            list_F1_final.append(list_F1)
-            list_F1star_final.append(list_F1star)
+            list_PC_final_noSingles.append(list_PC_noSingles)
+            list_PQ_final_noSingles.append(list_PQ_noSingles)
+            list_recall_final_noSingles.append(list_recall_noSingles)
+            list_precision_final.append(list_precision_noSingles)
+            list_fraction_final_noSingles.append(list_fraction_noSingles)
+            list_F1_final_noSingles.append(list_F1_noSingles)
+            list_F1star_final_noSingles.append(list_F1star_noSingles)
 
-    # print("PC is: ", PC)
-    # print("PQ is: ", PQ)
-    # print("F1* is: ",F1Star)
-    # print("precision is: ", precisionCluster)
-    # print("recall is: ", recallCluster)
-    print("F1 is: ", F1)
-    print("fraction of comparison is: ", fraction)
 
     repeats = repeats + 1
 
@@ -1282,13 +1267,13 @@ while repeats <= 49:
 
 
         if r == 20:
-            list_PC_final_without.append(list_PC)
-            list_PQ_final_without.append(list_PQ)
-            list_recall_final_without.append(list_recall)
-            list_precision_final_without.append(list_precision)
-            list_fraction_final_without.append(list_fraction)
-            list_F1_final_without.append(list_F1)
-            list_F1star_final_without.append(list_F1star)
+            list_PC_final_without.append(list_PC_without)
+            list_PQ_final_without.append(list_PQ)_without
+            list_recall_final_without.append(list_recall_without)
+            list_precision_final_without.append(list_precision_without)
+            list_fraction_final_without.append(list_fraction_without)
+            list_F1_final_without.append(list_F1_without)
+            list_F1star_final_without.append(list_F1star_without)
 
 
     repeats = repeats + 1
